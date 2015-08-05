@@ -1,0 +1,20 @@
+input {
+       file {
+             path => "/home/vagrant/access.log"             	           
+       }
+}
+filter {
+       grok {
+             match => { "message" => "%{COMBINEDAPACHELOG}"}
+        }
+       geoip {
+              source => "clientip"
+       }
+}
+output {
+        elasticsearch {
+              protocol => "http"
+	      index => "logstash.%{+YYYY.MM.dd}"
+        }
+        stdout {}
+}

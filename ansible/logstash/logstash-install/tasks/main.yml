@@ -1,0 +1,74 @@
+---
+- name: install Java 1.8
+  dnf:
+    name: java-1.8.0-openjdk
+    state: present
+
+- name: enable Logstash repository
+  template:
+    src: logstash_repo.j2
+    dest: /etc/yum.repos.d/logstash.repo
+
+- name: enable Elasticsearch repository
+  template:
+    src: elasticsearch_repo.j2
+    dest: /etc/yum.repos.d/elasticsearch.repo
+
+- name: install gpg (required for adding keys)
+  dnf:
+    name: gpg
+    state: present
+
+- name: Add Elastic Repo Key (for Elasticsearch and Logstash repos)
+  rpm_key:
+    key: "http://packages.elasticsearch.org/GPG-KEY-elasticsearch"
+    state: present
+
+# This fails on Fedora 22 virtualbox - all others succeed. Manual "sudo dnf install logstash -y" works.
+
+- name: install Logstash
+  dnf:
+    name: logstash
+    state: present
+
+- name: install Elasticsearch
+  dnf:
+    name: elasticsearch
+    state: present
+
+- name: copy pipeline configuration into place
+  template:
+    src: logstash_pipeline.j2
+    dest: /etc/logstash/conf.d/logstash.conf
+
+- name: copy sample access.log into place for indexing
+  copy:
+    src: access.log
+    dest: /home/vagrant/access.log
+
+- name: ensure Logstash restarted
+  service:
+    name: logstash
+    state: restarted
+
+- name: ensure Elasticsearch restarted
+  service:
+    name: elasticsearch
+    state: restarted
+
+- name: create directory for Kibana in /opt
+  file:
+    state: directory
+    path: /opt/kibana
+
+- name: download Kibana
+  get_url:
+    url: https://download.elastic.co/kibana/kibana/kibana-4.0.3-linux-x64.tar.gz
+    dest: /opt/kibana/kibana-4.0.3-linux-x64.tar.gz
+
+- name: unarchive Kibana
+  unarchive:
+    dest: /opt/kibana/
+    src: /opt/kibana/kibana-4.0.3-linux-x64.tar.gz
+    copy: no
+    creates: /opt/kibana/kibana-4.0.3-linux-x64
